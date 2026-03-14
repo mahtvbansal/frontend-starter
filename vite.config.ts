@@ -1,17 +1,23 @@
 import type { PluginOption } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import path from 'node:path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()] as unknown as PluginOption[],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   server: {
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
-        changeOrigin: true
-      }
-    }
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     globals: true,
@@ -25,14 +31,14 @@ export default defineConfig({
         '**/__tests__/**',
         '**/*.test.{ts,tsx}',
         '**/.eslintrc.cjs',
-        '**/vite.config.ts'
+        '**/vite.config.ts',
       ],
       thresholds: {
         lines: 90,
         branches: 90,
         functions: 90,
-        statements: 90
-      }
-    }
-  }
+        statements: 90,
+      },
+    },
+  },
 });
