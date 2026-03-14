@@ -1,9 +1,11 @@
-import { Box, Typography } from '@mui/material';
+import { RouterProvider } from 'react-router-dom';
+import { AuthProvider } from '@/context/AuthContext';
+import { appRouter } from '@/routes/app-router';
 
-export function Root() {
-  return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h5">Invoice Management</Typography>
-    </Box>
-  );
-}
+const Root = (): JSX.Element => (
+  <AuthProvider>
+    <RouterProvider router={appRouter} />
+  </AuthProvider>
+);
+
+export default Root;
