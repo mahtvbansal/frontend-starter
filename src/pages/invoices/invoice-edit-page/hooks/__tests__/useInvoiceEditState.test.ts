@@ -17,6 +17,11 @@ vi.mock('@/services/api', () => ({
 
 const mockedInvoiceApi = vi.mocked(invoiceApi);
 
+interface UseInvoiceEditStateHookProps {
+  invoiceId?: string;
+  hasPermission: (permission?: string | string[]) => boolean;
+}
+
 describe('useInvoiceEditState', () => {
   it('sets missing invoice id error and stops loading', async () => {
     const { result } = renderHook(() =>
@@ -76,14 +81,11 @@ describe('useInvoiceEditState', () => {
       error: null,
     });
 
+    const denyPermission = (): boolean => false;
+    const allowPermission = (): boolean => true;
+
     const { result, rerender } = renderHook(
-      ({
-        invoiceId,
-        hasPermission,
-      }: {
-        invoiceId?: string;
-        hasPermission: (permission?: string | string[]) => boolean;
-      }) =>
+      ({ invoiceId, hasPermission }: UseInvoiceEditStateHookProps) =>
         useInvoiceEditState({
           invoiceId,
           hasPermission,
@@ -91,8 +93,8 @@ describe('useInvoiceEditState', () => {
       {
         initialProps: {
           invoiceId: 'inv-1',
-          hasPermission: () => false,
-        },
+          hasPermission: denyPermission,
+        } as UseInvoiceEditStateHookProps,
       }
     );
 
@@ -106,7 +108,7 @@ describe('useInvoiceEditState', () => {
     });
     expect(result.current.serverError).toBe(PERMISSION_ERROR);
 
-    rerender({ invoiceId: undefined, hasPermission: () => true });
+    rerender({ invoiceId: undefined, hasPermission: allowPermission });
     await act(async () => {
       const submitResult = await result.current.handleSubmit();
       expect(submitResult).toEqual({ ok: false });

@@ -17,6 +17,10 @@ vi.mock('@/services/api', () => ({
 
 const mockedInvoiceApi = vi.mocked(invoiceApi);
 
+interface UseInvoiceViewStateHookProps {
+  hasPermission: (permission?: string | string[]) => boolean;
+}
+
 describe('useInvoiceViewState', () => {
   it('sets missing id error when invoiceId is not provided', async () => {
     const { result } = renderHook(() =>
@@ -78,8 +82,11 @@ describe('useInvoiceViewState', () => {
     });
 
     const onDeleteSuccess = vi.fn();
+    const denyPermission = (): boolean => false;
+    const allowPermission = (): boolean => true;
+
     const { result, rerender } = renderHook(
-      ({ hasPermission }: { hasPermission: (permission?: string | string[]) => boolean }) =>
+      ({ hasPermission }: UseInvoiceViewStateHookProps) =>
         useInvoiceViewState({
           invoiceId: 'inv-1',
           hasPermission,
@@ -87,8 +94,8 @@ describe('useInvoiceViewState', () => {
         }),
       {
         initialProps: {
-          hasPermission: () => false,
-        },
+          hasPermission: denyPermission,
+        } as UseInvoiceViewStateHookProps,
       }
     );
 
@@ -104,7 +111,7 @@ describe('useInvoiceViewState', () => {
     expect(mockedInvoiceApi.deleteInvoice).not.toHaveBeenCalled();
 
     mockedInvoiceApi.deleteInvoice.mockResolvedValueOnce({ error: {} });
-    rerender({ hasPermission: () => true });
+    rerender({ hasPermission: allowPermission });
 
     await act(async () => {
       await result.current.handleDelete();
