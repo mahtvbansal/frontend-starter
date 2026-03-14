@@ -1,6 +1,5 @@
-import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { Root } from '../Root';
+import Root from '@/Root';
 
 const renderMock = vi.fn();
 const createRootMock = vi.fn(() => ({ render: renderMock }));
@@ -8,8 +7,8 @@ const createRootMock = vi.fn(() => ({ render: renderMock }));
 vi.mock('react-dom/client', () => ({
   __esModule: true,
   default: {
-    createRoot: createRootMock
-  }
+    createRoot: createRootMock,
+  },
 }));
 
 describe('main', () => {
@@ -18,17 +17,13 @@ describe('main', () => {
     rootEl.id = 'root';
     document.body.appendChild(rootEl);
 
-    await import('../main');
+    await import('@/main');
 
     expect(createRootMock).toHaveBeenCalledWith(rootEl);
     expect(renderMock).toHaveBeenCalledTimes(1);
     const [app] = renderMock.mock.calls[0];
-    expect(app.type).toBe(React.StrictMode);
-    const themeProvider = app.props.children;
-    expect(themeProvider.type.toString()).toContain('ThemeProvider');
-    const children = Array.isArray(themeProvider.props.children)
-      ? themeProvider.props.children
-      : [themeProvider.props.children];
+    expect(app.type.toString()).toContain('ThemeProvider');
+    const children = Array.isArray(app.props.children) ? app.props.children : [app.props.children];
     const hasRoot = children.some((c: React.ReactElement) => c?.type === Root);
     expect(hasRoot).toBe(true);
 
