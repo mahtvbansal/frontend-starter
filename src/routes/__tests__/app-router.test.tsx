@@ -32,21 +32,17 @@ const collectRequiredPermissions = (nodes: RouteNode[]): string[] => {
 };
 
 const findIndexRedirectRoute = (nodes: RouteNode[]): RouteNode | undefined => {
-  for (const node of nodes) {
-    if (node.index && node.element?.props?.to === '/invoices' && node.element?.props?.replace) {
-      return node;
-    }
+  const currentLevelMatch = nodes.find(
+    (node) => node.index && node.element?.props?.to === '/invoices' && node.element?.props?.replace
+  );
 
-    if (node.children) {
-      const nested = findIndexRedirectRoute(node.children);
-
-      if (nested) {
-        return nested;
-      }
-    }
+  if (currentLevelMatch) {
+    return currentLevelMatch;
   }
 
-  return undefined;
+  return nodes
+    .map((node) => (node.children ? findIndexRedirectRoute(node.children) : undefined))
+    .find((node): node is RouteNode => Boolean(node));
 };
 
 describe('appRouter', () => {
