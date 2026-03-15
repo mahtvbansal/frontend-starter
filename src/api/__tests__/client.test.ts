@@ -221,4 +221,40 @@ describe('api/client', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect((fetchMock.mock.calls[0] as [string])[0]).toMatch(/\/api\/auth\/refresh$/);
   });
+
+  it('returns normalized runtime error when request throws (e.g. CORS/network)', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const { apiFetch } = await loadApiClient();
+    const result = await apiFetch('/auth/refresh', { method: 'POST' });
+
+    expect(result.data).toBeNull();
+    expect(result.error?.status).toBe(0);
+    expect(result.error?.message).toMatch(/failed to fetch/i);
+  });
+
+  it('returns normalized runtime error when refresh call throws during 401 retry', async () => {
+    const fetchMock = vi.mocked(fetch);
+
+    fetchMock
+      .mockResolvedValueOnce(
+        createMockResponse({
+          ok: false,
+          status: 401,
+          body: JSON.stringify({ message: 'Unauthorized' }),
+        }) as unknown as Response
+      )
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+    const onUnauthorized = vi.fn();
+    const { apiFetch, configureApiClient } = await loadApiClient();
+    configureApiClient({ onUnauthorized });
+
+    const result = await apiFetch('/invoices');
+
+    expect(result.data).toBeNull();
+    expect(result.error?.status).toBe(401);
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
 });
