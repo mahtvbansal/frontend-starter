@@ -54,6 +54,12 @@ const createError = (response, payload) => ({
   details: payload,
 });
 
+const createRuntimeError = (error) => ({
+  status: 0,
+  message: error instanceof Error ? error.message : 'Network request failed',
+  details: error,
+});
+
 const buildHeaders = (headers, body, token) => {
   const requestHeaders = new Headers(headers || {});
 
@@ -85,21 +91,25 @@ const buildRequestInit = (options, token) => {
 };
 
 const runRefreshRequest = async () => {
-  const token = authRuntime.getToken();
-  const response = await fetch(buildUrl('/auth/refresh'), {
-    method: 'POST',
-    credentials: 'include',
-    headers: buildHeaders(undefined, undefined, token),
-  });
-  const payload = await parseBody(response);
+  try {
+    const token = authRuntime.getToken();
+    const response = await fetch(buildUrl('/auth/refresh'), {
+      method: 'POST',
+      credentials: 'include',
+      headers: buildHeaders(undefined, undefined, token),
+    });
+    const payload = await parseBody(response);
 
-  if (!response.ok) {
-    return { data: null, error: createError(response, payload) };
+    if (!response.ok) {
+      return { data: null, error: createError(response, payload) };
+    }
+
+    authRuntime.onTokenRefresh(payload);
+
+    return { data: payload, error: null };
+  } catch (error) {
+    return { data: null, error: createRuntimeError(error) };
   }
-
-  authRuntime.onTokenRefresh(payload);
-
-  return { data: payload, error: null };
 };
 
 const refreshAuth = async () => {
@@ -127,28 +137,32 @@ export const configureApiClient = (config = {}) => {
 };
 
 export const apiFetch = async (path, options = {}, retryOnUnauthorized = true) => {
-  const response = await fetch(buildUrl(path), buildRequestInit(options, authRuntime.getToken()));
-  const payload = await parseBody(response);
+  try {
+    const response = await fetch(buildUrl(path), buildRequestInit(options, authRuntime.getToken()));
+    const payload = await parseBody(response);
 
-  if (
-    response.status === 401 &&
-    retryOnUnauthorized &&
-    buildUrl(path) !== buildUrl('/auth/refresh')
-  ) {
-    const refreshResult = await refreshAuth();
+    if (
+      response.status === 401 &&
+      retryOnUnauthorized &&
+      buildUrl(path) !== buildUrl('/auth/refresh')
+    ) {
+      const refreshResult = await refreshAuth();
 
-    if (!refreshResult.error) {
-      return apiFetch(path, options, false);
+      if (!refreshResult.error) {
+        return apiFetch(path, options, false);
+      }
+
+      authRuntime.onUnauthorized();
+
+      return { data: null, error: createError(response, payload) };
     }
 
-    authRuntime.onUnauthorized();
+    if (!response.ok) {
+      return { data: null, error: createError(response, payload) };
+    }
 
-    return { data: null, error: createError(response, payload) };
+    return { data: payload, error: null };
+  } catch (error) {
+    return { data: null, error: createRuntimeError(error) };
   }
-
-  if (!response.ok) {
-    return { data: null, error: createError(response, payload) };
-  }
-
-  return { data: payload, error: null };
 };
