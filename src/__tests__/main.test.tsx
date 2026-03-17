@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import Root from '@/Root';
 
 const renderMock = vi.fn();
@@ -12,7 +13,7 @@ vi.mock('react-dom/client', () => ({
 }));
 
 describe('main', () => {
-  it('mounts app to #root with ThemeProvider and Root', async () => {
+  it('mounts app to #root with ThemeProvider, ErrorBoundary, and Root', async () => {
     const rootEl = document.createElement('div');
     rootEl.id = 'root';
     document.body.appendChild(rootEl);
@@ -24,8 +25,10 @@ describe('main', () => {
     const [app] = renderMock.mock.calls[0];
     expect(app.type.toString()).toContain('ThemeProvider');
     const children = Array.isArray(app.props.children) ? app.props.children : [app.props.children];
-    const hasRoot = children.some((c: React.ReactElement) => c?.type === Root);
-    expect(hasRoot).toBe(true);
+    const errorBoundaryNode = children.find((c: React.ReactElement) => c?.type === ErrorBoundary);
+
+    expect(errorBoundaryNode).toBeDefined();
+    expect(errorBoundaryNode.props.children.type).toBe(Root);
 
     document.body.removeChild(rootEl);
   });
